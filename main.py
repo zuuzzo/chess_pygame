@@ -45,6 +45,7 @@ chessboard[7] = ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"]
 # Game state variables
 selected_piece = None
 selected_piece_pos = None
+current_turn = "w"
 
 # Function to convert screen coordinates to chessboard coordinates
 def get_chessboard_pos(mouse_pos):
@@ -54,9 +55,114 @@ def get_chessboard_pos(mouse_pos):
 
 # Function to handle piece movement
 def move_piece(from_pos, to_pos):
-    global chessboard
+    global chessboard, current_turn
     chessboard[to_pos[0]][to_pos[1]] = chessboard[from_pos[0]][from_pos[1]]
     chessboard[from_pos[0]][from_pos[1]] = None
+    current_turn = "b" if current_turn == "w" else "w"
+
+# Function to check if the move is valid for a pawn
+def is_valid_pawn_move(from_pos, to_pos):
+    row1, col1 = from_pos
+    row2, col2 = to_pos
+    piece = chessboard[row1][col1]
+    if piece == "wp":
+        # White pawn
+        if row1 - row2 == 1 and abs(col1 - col2) == 1:
+            # Diagonal capture
+            return chessboard[row2][col2] is not None and chessboard[row2][col2][0] == "b"
+        elif row1 - row2 == 1 and col1 == col2:
+            # Forward move
+            return chessboard[row2][col2] is None
+        elif row1 == 6 and row1 - row2 == 2 and col1 == col2:
+            # Initial two-square move
+            return chessboard[row2][col2] is None and chessboard[row2 + 1][col2] is None
+    else:
+        # Black pawn
+        if row2 - row1 == 1 and abs(col2 - col1) == 1:
+            # Diagonal capture
+            return chessboard[row2][col2] is not None and chessboard[row2][col2][0] == "w"
+        elif row2 - row1 == 1 and col1 == col2:
+            # Forward move
+            return chessboard[row2][col2] is None
+        elif row1 == 1 and row2 - row1 == 2 and col1 == col2:
+            # Initial two-square move
+            return chessboard[row2][col2] is None and chessboard[row2 - 1][col2] is None
+    return False
+
+# Function to check if the move is valid for a rook
+def is_valid_rook_move(from_pos, to_pos):
+    row1, col1 = from_pos
+    row2, col2 = to_pos
+    if row1 == row2:
+        # Horizontal move
+        start = min(col1, col2) + 1
+        end = max(col1, col2)
+        for col in range(start, end):
+            if chessboard[row1][col] is not None:
+                return False
+        return True
+    elif col1 == col2:
+        # Vertical move
+        start = min(row1, row2) + 1
+        end = max(row1, row2)
+        for row in range(start, end):
+            if chessboard[row][col1] is not None:
+                return False
+        return True
+    return False
+
+# Function to check if the move is valid for a knight
+def is_valid_knight_move(from_pos, to_pos):
+    row1, col1 = from_pos
+    row2, col2 = to_pos
+    return (
+        (abs(row2 - row1) == 2 and abs(col2 - col1) == 1) or
+        (abs(row2 - row1) == 1 and abs(col2 - col1) == 2)
+    )
+
+# Function to check if the move is valid for a bishop
+def is_valid_bishop_move(from_pos, to_pos):
+    row1, col1 = from_pos
+    row2, col2 = to_pos
+    if abs(row2 - row1) == abs(col2 - col1):
+        start_row = min(row1, row2) + 1
+        start_col = min(col1, col2) + 1
+        end_row = max(row1, row2)
+        end_col = max(col1, col2)
+        for row, col in zip(range(start_row, end_row), range(start_col, end_col)):
+            if chessboard[row][col] is not None:
+                return False
+        return True
+    return False
+
+# Function to check if the move is valid for a queen
+def is_valid_queen_move(from_pos, to_pos):
+    return (
+        is_valid_rook_move(from_pos, to_pos) or
+        is_valid_bishop_move(from_pos, to_pos)
+    )
+
+# Function to check if the move is valid for a king
+def is_valid_king_move(from_pos, to_pos):
+    row1, col1 = from_pos
+    row2, col2 = to_pos
+    return abs(row2 - row1) <= 1 and abs(col2 - col1) <= 1
+
+# Function to check if the move is valid based on the piece type
+def is_valid_move(piece_type, from_pos, to_pos):
+    if piece_type == "p":
+        return is_valid_pawn_move(from_pos, to_pos)
+    elif piece_type == "R":
+        return is_valid_rook_move(from_pos, to_pos)
+    elif piece_type == "N":
+        return is_valid_knight_move(from_pos, to_pos)
+    elif piece_type == "B":
+        return is_valid_bishop_move(from_pos, to_pos)
+    elif piece_type == "Q":
+        return is_valid_queen_move(from_pos, to_pos)
+    elif piece_type == "K":
+        return is_valid_king_move(from_pos, to_pos)
+    return False
 
 # Game loop
 running = True
@@ -69,14 +175,16 @@ while running:
             mouse_pos = pygame.mouse.get_pos()
             row, col = get_chessboard_pos(mouse_pos)
 
-            if selected_piece is None:
+            if selected_piece is None and chessboard[row][col] is not None and chessboard[row][col][0] == current_turn:
                 # Select a piece
-                if chessboard[row][col] is not None:
-                    selected_piece = chessboard[row][col]
-                    selected_piece_pos = (row, col)
-            else:
+                selected_piece = chessboard[row][col]
+                selected_piece_pos = (row, col)
+            elif selected_piece is not None:
                 # Move the selected piece
-                move_piece(selected_piece_pos, (row, col))
+                from_pos = selected_piece_pos
+                to_pos = (row, col)
+                if is_valid_move(selected_piece[1], from_pos, to_pos):
+                    move_piece(from_pos, to_pos)
                 selected_piece = None
                 selected_piece_pos = None
 
