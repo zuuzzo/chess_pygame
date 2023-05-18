@@ -70,10 +70,10 @@ def is_valid_pawn_move(from_pos, to_pos):
         if row1 - row2 == 1 and abs(col1 - col2) == 1:
             # Diagonal capture
             return chessboard[row2][col2] is not None and chessboard[row2][col2][0] == "b"
-        elif row1 - row2 == 1 and col1 == col2:
+        elif row1 - row2 == 1 and col1 == col2 and chessboard[row2][col2] is None:
             # Forward move
             return chessboard[row2][col2] is None
-        elif row1 == 6 and row1 - row2 == 2 and col1 == col2:
+        elif row1 == 6 and row1 - row2 == 2 and col1 == col2 and chessboard[row2][col2] is None and chessboard[row2 + 1][col2] is None:
             # Initial two-square move
             return chessboard[row2][col2] is None and chessboard[row2 + 1][col2] is None
     else:
@@ -81,72 +81,61 @@ def is_valid_pawn_move(from_pos, to_pos):
         if row2 - row1 == 1 and abs(col2 - col1) == 1:
             # Diagonal capture
             return chessboard[row2][col2] is not None and chessboard[row2][col2][0] == "w"
-        elif row2 - row1 == 1 and col1 == col2:
+        elif row2 - row1 == 1 and col1 == col2 and chessboard[row2][col2] is None:
             # Forward move
             return chessboard[row2][col2] is None
-        elif row1 == 1 and row2 - row1 == 2 and col1 == col2:
+        elif row1 == 1 and row2 - row1 == 2 and col1 == col2 and chessboard[row2][col2] is None and chessboard[row2 - 1][col2] is None:
             # Initial two-square move
             return chessboard[row2][col2] is None and chessboard[row2 - 1][col2] is None
     return False
 
 # Function to check if the move is valid for a rook
 def is_valid_rook_move(from_pos, to_pos):
-    row1, col1 = from_pos
-    row2, col2 = to_pos
-    if row1 == row2:
-        # Horizontal move
-        start = min(col1, col2) + 1
-        end = max(col1, col2)
-        for col in range(start, end):
-            if chessboard[row1][col] is not None:
-                return False
-        return True
-    elif col1 == col2:
-        # Vertical move
-        start = min(row1, row2) + 1
-        end = max(row1, row2)
-        for row in range(start, end):
-            if chessboard[row][col1] is not None:
-                return False
-        return True
+    # Check if the move is horizontal or vertical
+    if from_pos[0] == to_pos[0] or from_pos[1] == to_pos[1]:
+        piece = chessboard[from_pos[0]][from_pos[1]]
+        target_piece = chessboard[to_pos[0]][to_pos[1]]
+        return target_piece is None or target_piece[0] != piece[0] # Check for capturing opponent's piece
     return False
 
 # Function to check if the move is valid for a knight
 def is_valid_knight_move(from_pos, to_pos):
     row1, col1 = from_pos
     row2, col2 = to_pos
-    return (
-        (abs(row2 - row1) == 2 and abs(col2 - col1) == 1) or
-        (abs(row2 - row1) == 1 and abs(col2 - col1) == 2)
-    )
+    piece = chessboard[row1][col1]
+    target_piece = chessboard[row2][col2]
+    if abs(row1 - row2) == 2 and abs(col1 - col2) == 1:
+        return target_piece is None or target_piece[0] != piece[0] # Check for capturing opponent's piece
+    elif abs(row1 - row2) == 1 and abs(col1 - col2) == 2:
+        return target_piece is None or target_piece[0] != piece[0] # Check for capturing opponent's piece
+    return False
 
 # Function to check if the move is valid for a bishop
 def is_valid_bishop_move(from_pos, to_pos):
-    row1, col1 = from_pos
-    row2, col2 = to_pos
-    if abs(row2 - row1) == abs(col2 - col1):
-        start_row = min(row1, row2) + 1
-        start_col = min(col1, col2) + 1
-        end_row = max(row1, row2)
-        end_col = max(col1, col2)
-        for row, col in zip(range(start_row, end_row), range(start_col, end_col)):
-            if chessboard[row][col] is not None:
-                return False
-        return True
+    # Check if the move is diagonal
+    if abs(from_pos[0] - to_pos[0]) == abs(from_pos[1] - to_pos[1]):
+        piece = chessboard[from_pos[0]][from_pos[1]]
+        target_piece = chessboard[to_pos[0]][to_pos[1]]
+        return target_piece is None or target_piece[0] != piece[0] # Check for capturing opponent's piece
     return False
 
 # Function to check if the move is valid for a queen
 def is_valid_queen_move(from_pos, to_pos):
-    return (
-        is_valid_rook_move(from_pos, to_pos) or
-        is_valid_bishop_move(from_pos, to_pos)
-    )
+    if is_valid_rook_move(from_pos, to_pos) or is_valid_bishop_move(from_pos, to_pos):
+        piece = chessboard[from_pos[0]][from_pos[1]]
+        target_piece = chessboard[to_pos[0]][to_pos[1]]
+        return target_piece is None or target_piece[0] != piece[0] # Check for capturing opponent's piece
+    return False
 
 # Function to check if the move is valid for a king
 def is_valid_king_move(from_pos, to_pos):
     row1, col1 = from_pos
     row2, col2 = to_pos
-    return abs(row2 - row1) <= 1 and abs(col2 - col1) <= 1
+    piece = chessboard[row1][col1]
+    target_piece = chessboard[row2][col2]
+    if abs(row1 - row2) <= 1 and abs(col1 - col2) <= 1:
+        return target_piece is None or target_piece[0] != piece[0] # Check for capturing opponent's piece
+    return False
 
 # Function to check if the move is valid based on the piece type
 def is_valid_move(piece_type, from_pos, to_pos):
